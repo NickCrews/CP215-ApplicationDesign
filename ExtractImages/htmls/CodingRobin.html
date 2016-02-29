@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<!-- saved from url=(0076)http://coding-robin.de/2013/07/22/train-your-own-opencv-haar-classifier.html -->
+<html lang="en" fixundefinedframes-status="initialized"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <title>Coding Robin</title>
+    <meta name="viewport" content="width=device-width">
+    <link href="./Coding Robin_files/css" rel="stylesheet" type="text/css">
+    <link rel="icon" type="image/png" href="http://coding-robin.de/images/coding_robin_favicon.png">
+    <link rel="stylesheet" href="http://coding-robin.de/style.css">
+  <script type="text/javascript" async="" src="./Coding Robin_files/ga.js"></script><script type="text/javascript" async="" src="./Coding Robin_files/embed.js"></script><script async="" type="text/javascript" src="./Coding Robin_files/count.js"></script></head>
+  <body>
+
+    <div id="wrapper">
+
+      <header id="top">
+        <a href="http://coding-robin.de/">
+          <img src="./Coding Robin_files/codingrobin_logo.png" alt="Coding Robin">
+        </a>
+      </header>
+
+      <div class="content">
+        <section class="post">
+  <h1>Train Your Own OpenCV Haar Classifier</h1>
+  <div class="date-author">
+    <span>22</span> <span>July</span> <span>2013</span>, posted by 
+    <a href="http://coding-robin.de/2013/07/22/train-your-own-opencv-haar-classifier.html#thorsten">
+      Thorsten Ball
+    </a>
+  </div>
+  <article>
+    <p>Open <a href="http://inspirit.github.io/jsfeat/sample_haar_face.html">this page</a>, allow
+it to access your webcam and see your face getting recognized by your browser
+using JavaScript and OpenCV, an “open source computer vision library”. That’s
+pretty cool! But recognizing faces in images is not something terribly new and
+exciting. Wouldn’t it be great if we could tell OpenCV to recognize something
+of our choice, something that is not a face? Let’s say… a banana?</p>
+
+<!--break-->
+
+<p>That is totally possible! What we need in order to do that is called a “cascade
+classifier for <a href="https://en.wikipedia.org/wiki/Haar-like_features">Haar
+features</a>” to point OpenCV at.
+A cascade classifier basically tells OpenCV what to look for in images. In the
+example above a classifier for face features was being used. There are <a href="http://alereimondo.no-ip.org/OpenCV/34">a
+lot</a> of <a href="https://github.com/inspirit/jsfeat/tree/master/cascades">cascade
+classifiers</a> floating
+around on the internet and you can easily find a different one and use it. But
+most of them are for recognizing faces, eyes, ears and mouths though and it
+would be great if we could tell OpenCV to recognize an object of our choice. We
+need a cascade classifier that tells OpenCV how to recognize a banana.</p>
+
+<p>Here’s the good news: we can generate our own cascade classifier for Haar
+features. Over in computer vision land that’s called <a href="http://docs.opencv.org/doc/user_guide/ug_traincascade.html#">“training a cascade
+classifier”</a>. Even
+better news: it’s not really difficult. And by “not really” I mean it takes
+time and a certain amount of willingness to dig through the internet to
+find the relevant information and tutorials on how to do it, but you don’t need
+a PhD and a lab.</p>
+
+<p>But now for the best of news: keep on reading! We’ll train our own cascade
+classifier in the following paragraphs and you just need to follow the steps
+described here.</p>
+
+<p><em>The following instructions are heavily based on Naotoshi Seo’s immensely
+helpful <a href="http://note.sonots.com/SciSoftware/haartraining.html">notes on OpenCV
+haartraining</a> and make use
+of his <a href="https://code.google.com/p/tutorial-haartraining/">scripts and resources</a>
+he released under the MIT licencse. This is an attempt to provide a more
+up-to-date step-by-step guide for OpenCV 2.x that wouldn’t be possible without
+his work — Thanks Naotoshi!</em></p>
+
+<h2 id="lets-get-started">Let’s get started</h2>
+
+<p>The first thing you need to do is clone the <a href="https://github.com/mrnugget/opencv-haar-classifier-training">repository on
+GitHub</a> I made for
+this post. It includes some empty directories (which we’ll fill later on), some
+utilities and most importantly: an even playing field.</p>
+
+<pre><code>git clone https://github.com/mrnugget/opencv-haar-classifier-training
+</code></pre>
+
+<p>You’ll also need OpenCV on your system. The preferred installation methods
+differ between operating systems so I won’t go into them, but be sure to get at
+least OpenCV 2.4.5, since that’s the version this post is based on and OpenCV
+2.x had some major API changes. Build OpenCV with <code>TBB</code> enabled,
+since that allows us to make use of multiple threads while training the
+classifier.</p>
+
+<p>If you’re on OS X and use homebrew it’s as easy as this:</p>
+
+<pre><code>brew tap homebrew/science
+brew install --with-tbb opencv
+</code></pre>
+
+<p>Another thing we need is the OpenCV source code corresponding to our installed
+version. So if your preferred installation method doesn’t provide you with
+access to it go and <a href="http://sourceforge.net/projects/opencvlibrary/files/?source=navbar">download
+it</a>. If
+you get a compiler error further down, be sure to try it with OpenCV 2.4.5.</p>
+
+<h2 id="samples">Samples</h2>
+
+<p>In order to train our own classifier we need samples, which means we need a lot
+of images that show the object we want to detect (positive sample) and even more
+images without the object (negative sample).</p>
+
+<p>How many images do we need? The numbers depend on a variety of factors,
+including the quality of the images, the object you want to recognize, the
+method to generate the samples, the CPU power you have and probably some magic.</p>
+
+<p>Training a highly accurate classifier takes a lot of time and a huge number of
+samples. The classifiers made for face recognition are great examples:
+they were created by researchers with thousands of good images. The TechnoLabsz blog
+has a <a href="http://www.technolabsz.com/2011/08/how-to-do-opencv-haar-training.html">great
+post</a>
+that provides some information based on their experience:</p>
+
+<pre><code>It is unclear exactly how many of each kind of image are needed. For Urban
+Challenge 2008 we used 1000 positive and 1000 negative images whereas the
+previous project Grippered Bandit used 5000. The result for the Grippered Bandit
+project was that their classifier was much more accurate than ours.
+</code></pre>
+
+<p>This post here is just an introduction and getting a large number of good
+samples is harder than you might think, so we’ll just settle on the right amount
+that gives us decent results and is not too hard to come by:</p>
+
+<p>I’ve had success with the following numbers for small experiments: <strong>40 positive
+samples</strong> and <strong>600 negative samples</strong>. So let’s use those!</p>
+
+<h3 id="positive-images">Positive Images</h3>
+
+<p>Now we need to either take photos of the object we want to detect, look for them
+on the internet, extract them from a video or take some Polaroid pictures and
+then scan them: whatever it takes! We need <strong>40 of them</strong>, which we can then use
+to generate positive samples OpenCV can work with. It’s also important that
+they should differ in lighting and background.</p>
+
+<p><strong>Once we have the pictures, we need to crop them so that only our desired
+object is visible</strong>. Keep an eye on the ratios of the cropped
+images, they shouldn’t differ that much. The best results come from positive
+images that look exactly like the ones you’d want to detect the object in, except
+that they are cropped so only the object is visible.</p>
+
+<p>Again: a lot of this depends on a variety of factors and I don’t know all of
+them and a big part of it is probably black computer science magic, but since I’ve
+had pretty good results by cropping them and keeping the ratio nearly the same,
+let’s do the same now. To give you an idea, here are some scaled down positive
+images for the banana classifier:</p>
+
+<p><img src="./Coding Robin_files/opencv_positive_cropped_scaled_01.jpg" alt="Cropped Image Of Object - Scaled Down 01">
+<img src="./Coding Robin_files/opencv_positive_cropped_scaled_02.jpg" alt="Cropped Image Of Object - Scaled Down 02">
+<img src="./Coding Robin_files/opencv_positive_cropped_scaled_03.jpg" alt="Cropped Image Of Object - Scaled Down 03"></p>
+
+<p>Take the positive, cropped images and put them in the <code>./positive_images</code>
+directory of the cloned repository.</p>
+
+<p>Then, from the root of the repository, run this command in your shell:</p>
+
+<pre><code>find ./positive_images -iname "*.jpg" &gt; positives.txt
+</code></pre>
+
+<h3 id="negative-images">Negative Images</h3>
+
+<p>Now we need the negative images, the ones that don’t show a banana. In the best
+case, if we were to train a highly accurate classifier, we would have a lot of
+negative images that look exactly like the positive ones, except that they don’t
+contain the object we want to recognize. If you want to detect stop signs on
+walls, the negative images would ideally be a lot of pictures of walls. Maybe
+even with other signs.</p>
+
+<p>We need at least <strong>600</strong> of them. And yes, getting them manually by hand takes a
+long time. I know, I’ve been there. But again: you could take a video file and
+extract the frames as images. That way you’d get 600 pictures pretty fast.</p>
+
+<p>For the banana classifier I used random photos from my iPhoto library and some
+photos of the background where I photographed the banana earlier, since the
+classifier should be able to tell OpenCV about a banana in pretty much any
+picture.</p>
+
+<p>Once we have the images, we put all of them in the <code>negative_images</code> folder of
+the repository and use <code>find</code> to save the list of relative paths to a
+file:</p>
+
+<pre><code>find ./negative_images -iname "*.jpg" &gt; negatives.txt
+</code></pre>
+
+<h3 id="creating-samples">Creating Samples</h3>
+
+<p>With our positive and negative images in place, we are ready to generate samples
+out of them, which we will use for the training itself. We need positive and
+negative samples. Luckily we already have the negative samples in place. To
+quote the OpenCV documentation <a href="http://docs.opencv.org/doc/user_guide/ug_traincascade.html#negative-samples">about negative
+samples</a>:</p>
+
+<pre><code>"Negative samples are taken from arbitrary images. These images must not contain
+detected objects. Negative samples are enumerated in a special file. It is a
+text file in which each line contains an image filename (relative to the
+directory of the description file) of negative sample image."
+</code></pre>
+
+<p>That means our <code>negatives.txt</code> will serve as a list of negative samples. But we
+still need positive samples and there are a lot of different ways to get them
+which all lead to different results regarding the accuracy of your trained
+classifier. Be sure to read <a href="http://note.sonots.com/SciSoftware/haartraining.html#w0a08ab4">the reference about creating samples in Naotoshi
+Seo’s tutorial, to know what it’s all
+about</a>.</p>
+
+<p>We’re going to use a method that doesn’t need a lot of preparation or a large
+number of positive or negative images. We’ll use a tool OpenCV gives us:
+<code>opencv_createsamples</code>. This tool offers several options as to how generate
+samples out of input images and gives us a <code>*.vec</code> file which we can then use
+to train our classifier.</p>
+
+<p><code>opencv_createsamples</code> generates a large number of positive samples from our
+positive images, by applying transformations and distortions. Since
+one can only transform so much out of one image until it’s not a different
+version anymore, we need a little help to get a larger number of samples out of
+our relatively small number of input images.</p>
+
+<p>Naotoshi Seo wrote some really useful scripts that help a lot when generating
+samples. The first one we’ll use is <code>createsamples.pl</code>, a small Perl script, to
+get <strong>1500 positive samples</strong>, by combining each positive image with a random negative
+image and then running them through <code>opencv_createsamples</code>.</p>
+
+<p>So, let’s make sure we’re in the root directory of the repository and fire this up:</p>
+
+<pre><code>perl bin/createsamples.pl positives.txt negatives.txt samples 1500\
+  "opencv_createsamples -bgcolor 0 -bgthresh 0 -maxxangle 1.1\
+  -maxyangle 1.1 maxzangle 0.5 -maxidev 40 -w 80 -h 40"
+</code></pre>
+
+<p>This shouldn’t take too long. There is a lot of information about
+<code>opencv_createsamples</code> available online, be sure <a href="http://docs.opencv.org/doc/user_guide/ug_traincascade.html#positive-samples">to read up on
+it</a>,
+if you want to tune the parameters. What you need to pay attention to are <code>-w</code>
+and <code>-h</code>: they should have the same ratio as your positive input images.</p>
+
+<p>The next thing we need to do is to merge the <code>*.vec</code> files we now have in the
+<code>samples</code> directory. In order to do so, we need to get a list of them and then
+use Naotoshi Seo’s <code>mergevec.cpp</code> tool, which I’ve included in the <code>src</code>
+directory of the repository, to combine them into one <code>*.vec</code> file.</p>
+
+<p>In order to use it, we need to copy it into the OpenCV source
+directory and compile it there with other OpenCV files:</p>
+
+<pre><code>cp src/mergevec.cpp ~/opencv-2.4.5/apps/haartraining
+cd ~/opencv-2.4.5/apps/haartraining
+g++ `pkg-config --libs --cflags opencv` -I. -o mergevec mergevec.cpp\
+  cvboost.cpp cvcommon.cpp cvsamples.cpp cvhaarclassifier.cpp\
+  cvhaartraining.cpp\
+  -lopencv_core -lopencv_calib3d -lopencv_imgproc -lopencv_highgui -lopencv_objdetect
+</code></pre>
+
+<p>Then we can go back to the repository, bring the executable <code>mergevec</code> with us and use it:</p>
+
+<pre><code>find ./samples -name '*.vec' &gt; samples.txt
+./mergevec samples.txt samples.vec
+</code></pre>
+
+<p>We can now use the resulting <code>samples.vec</code> to start the training of our
+classifier.</p>
+
+<h2 id="training-the-classifier">Training the classifier</h2>
+
+<p>OpenCV offers two different applications for training a Haar classifier:
+<code>opencv_haartraining</code> and <code>opencv_traincascade</code>. We are going to use
+<code>opencv_traincascade</code> since it allows the training process to be multi-threaded,
+reducing the time it takes to finish, and is compatible with the newer OpenCV
+2.x API. Whenever you run into a problem when loading your classifier, make sure
+the application knows how to handle the format of the cascade file, since
+cascade files generated by <code>opencv_haartraining</code> and <code>opencv_traincascade</code>
+differ in format.</p>
+
+<p><em>Many tools and libraries out there (including jsfeat, which is used in the
+example in the first paragraph) only accept classifiers in the old format. The
+reason for this is most likely that the majority of the easily available
+classifiers (e.g.  the ones that ship with OpenCV) still use that format. So if
+you want to use these libraries and tools you should use <code>opencv_haartraining</code>
+to train your classifier.</em></p>
+
+<p>So let’s point <code>opencv_traincascade</code> at our positive samples (<code>samples.vec</code>),
+negative images, tell it to write its output into the <code>classifier</code> directory of
+our repository and the sample size (<code>-w</code> and <code>-h</code>). <code>-numNeg</code> specifies how many
+negative samples are there and <code>-precalcValBufSize</code> and <code>-precalcIdxBufSize</code> how
+much memory to use while training. <code>-numPos</code> should be lower than the positive
+samples we generated.</p>
+
+<pre><code>opencv_traincascade -data classifier -vec samples.vec -bg negatives.txt\
+  -numStages 20 -minHitRate 0.999 -maxFalseAlarmRate 0.5 -numPos 1000\
+  -numNeg 600 -w 80 -h 40 -mode ALL -precalcValBufSize 1024\
+  -precalcIdxBufSize 1024
+</code></pre>
+
+<p>Read at least <a href="http://answers.opencv.org/question/7141/about-traincascade-paremeters-samples-and-other/">this post on the OpenCV answer board</a>
+and the <a href="http://docs.opencv.org/doc/user_guide/ug_traincascade.html#cascade-training">official documentation</a>
+about <code>opencv_traincascade</code> to get a better understanding of the parameters in
+use here. Especially the <code>-numPos</code> parameter can cause <a href="http://stackoverflow.com/questions/10863560/haar-training-opencv-assertion-failed">some
+problems</a>.</p>
+
+<p>This is going to take a lot of time. And I don’t mean the old “get a coffee and
+come back”-taking-a-lot-of-time, no. Running this took a couple of days on my
+mid-2011 MacBook Air. It will also use a lot of memory and CPU. Do something
+else while this runs and come back after you noticed that it finished. Even
+better: use a EC2 box to run this on.</p>
+
+<p>You don’t have to keep the process running without any interruptions though:
+you can stop and restart it at any time and it will proceeded from the latest
+training stage it finished.</p>
+
+<p>When the process is finished we’ll find a file called <code>classifier.xml</code> in the
+<code>classifier</code> directory. This is the one, this is our classifier we can now use
+to detect bananas with OpenCV! Only the sky is the limit now.</p>
+
+<h2 id="using-our-own-classifier">Using our own classifier</h2>
+<p>### Node.js and OpenCV</p>
+
+<p>Let’s give our classifier a shot by using Node.js and the
+<a href="https://github.com/peterbraden/node-opencv">node-opencv</a> module. We’ll use <a href="https://github.com/peterbraden/node-opencv/blob/master/examples/Face.js">one of
+the examples</a>
+in the repository and modify it to scan multiple image files.</p>
+
+<p>```javascript
+var cv = require(‘opencv’);</p>
+
+<p>var color       = [0, 255, 0];
+var thickness   = 2;
+var cascadeFile = ‘./my_cascade.xml’;</p>
+
+<p>var inputFiles = [
+  ‘./recognize_this_1.jpg’, ‘./recognize_this_2.jpg’, ‘./recognize_this_3.jpg’,
+  ‘./recognize_this_3.jpg’, ‘./recognize_this_4.jpg’, ‘./recognize_this_5.jpg’
+];</p>
+
+<p>inputFiles.forEach(function(fileName) {
+  cv.readImage(fileName, function(err, im) {
+    im.detectObject(cascadeFile, {neighbors: 2, scale: 2}, function(err, objects) {
+      console.log(objects);
+      for(var k = 0; k &lt; objects.length; k++) {
+        var object = objects[k];
+        im.rectangle([object.x, object.y], [object.x + object.width, object.y + object.height], color, 2);
+      }
+      im.save(fileName.replace(/.jpg/, ‘processed.jpg’));
+    });
+  });
+});
+```</p>
+
+<p>This code is pretty straightforward: change <code>inputFiles</code> so that it contains
+the paths to the files that include the object we want to detect and mark, then
+run it with <code>node recognize_this.js</code>. It will read in the specified <code>inputFiles</code>
+with OpenCV and try to detect objects with our cascade classifier.</p>
+
+<p>Now open all the files ending in <code>*processed.jpg</code> and see if your classifier works:
+if OpenCV detected one or more objects in one of the input files it should have
+marked them with a green rectangle. If the results are not to your liking, try
+playing around with the <code>neighbors</code> and <code>scale</code> options passed to
+<code>detectObject</code>.</p>
+
+<p>The banana classifier works quite well:</p>
+
+<p><img src="./Coding Robin_files/nodejs_bananadetect_monkey.jpg" alt="Node.js, Monkey &amp; Banana">
+<img src="./Coding Robin_files/nodejs_bananadetect_desk.jpg" alt="A banana on the desk"></p>
+
+<h3 id="opencvs-facedetect">OpenCV’s facedetect</h3>
+
+<p>Now let’s use our webcam to detect a banana! OpenCV ships with a lot of samples
+and one of them is <code>facedetect.cpp</code>, which allows us to detect objects in video
+frames captured by a webcam. Compiling and using it is pretty straightforward:</p>
+
+<pre><code>cd ~/opencv-2.4.5/samples/c
+chmod +x build_all.sh
+./build_all.sh
+./facedetect --scale=2 --cascade="/Users/mrnugget/banana_classifier.xml"
+</code></pre>
+
+<p>Be sure to play around with the <code>--scale</code> parameter, especially if the results
+are not what you expected. If all goes well, you should see something like this:</p>
+
+<p><img src="./Coding Robin_files/bananadetect_screenshot.jpg" alt="Bananadetect"></p>
+
+<h2 id="in-closing">In Closing</h2>
+
+<p>OpenCV, Haar classifiers and image detection are vast topics that are nearly
+impossible to cover in a blog post of this size, but I hope this post helps you
+to get your feet wet and gives you an idea of what’s possible. If you want to get
+a more thorough understanding start reading through the references linked below.</p>
+
+<p>Be sure to dig through the <code>samples</code> folder of the OpenCV source, play around
+with other language bindings and libraries. With your own classifier it’s even
+more fun than “just” detecting faces. And if your classifier is not yet
+finished, try playing around with the banana classifier I put in the
+<a href="https://github.com/mrnugget/opencv-haar-classifier-training/tree/master/trained_classifiers"><code>trained_classifier</code></a>
+directory of the repository. I’m sure there are thousands of super practical use
+cases for it, so go ahead and use it. And if you want to add your classifier to
+the directory just send a pull request!</p>
+
+<p>If there are any questions, problems or remarks: leave a comment!</p>
+
+<h1 id="references">References:</h1>
+
+<ul>
+  <li><a href="http://docs.opencv.org/modules/objdetect/doc/cascade_classification.html">OpenCV Documentation - Haar Feature-based Cascade Classifier for Object Detection</a></li>
+  <li><a href="http://docs.opencv.org/doc/user_guide/ug_traincascade.html">OpenCV Documentation - Cascade Classifier Training</a></li>
+  <li><a href="http://note.sonots.com/SciSoftware/haartraining.html">Naotoshi Seo - Tutorial: OpenCV haartraining (Rapid Object Detection With A Cascade of Boosted Classifiers Based on Haar-like Features)</a></li>
+  <li><a href="https://code.google.com/p/tutorial-haartraining/">Material for Naotoshi Seo’s tutorial</a></li>
+  <li><a href="http://answers.opencv.org/question/7141/about-traincascade-paremeters-samples-and-other/">OpenCV Answers - “about traincascade paremeters, samples, and other…”</a></li>
+  <li><a href="http://answers.opencv.org/question/16199/memory-consumption-while-training-50gb/">OpenCV Answers - “memory consumption while training &gt; 50GB”</a></li>
+  <li><a href="http://blog.davidjbarnes.com/2010/04/opencv-haartraining-object-detection.html">David J Barnes on Robotics &amp; Mechatronics - OpenCV HaarTraining - Object Detection with a Cascade of Boosted Classifiers Based on Haar-like Features - Part I</a></li>
+  <li><a href="http://blog.davidjbarnes.com/2010/04/opencv-haartraining-object-detection_09.html">David J Barnes on Robotics &amp; Mechatronics - OpenCV HaarTraining - Object Detection with a Cascade of Boosted Classifiers Based on Haar-like Features - Part II</a></li>
+  <li><a href="https://github.com/foo123/HAAR.js">github.com/foo123/HAAR.js</a></li>
+  <li><a href="https://github.com/mtschirs/js-objectdetect">github.com/mtschirs/js-objectdetect</a></li>
+  <li><a href="http://inspirit.github.io/jsfeat/">github.com/inspirit/jsfeat</a></li>
+  <li><a href="http://www.computer-vision-software.com/blog/2009/11/faq-opencv-haartraining/">Computer Vision Software - FAQ: OpenCV Haartraining</a></li>
+  <li><a href="http://stackoverflow.com/questions/10863560/haar-training-opencv-assertion-failed">StackOverflow - haar training OpenCV assertion failed</a></li>
+</ul>
+
+  </article>
+  <footer>
+    <a class="backtotop" href="http://coding-robin.de/2013/07/22/train-your-own-opencv-haar-classifier.html#top">Back To Top</a>
+  </footer>
+
+  
+    <section class="comments">
+      <div id="disqus_thread"><iframe id="dsq-2" data-disqus-uid="2" allowtransparency="true" frameborder="0" scrolling="no" tabindex="0" title="Disqus" width="100%" src="./Coding Robin_files/saved_resource.html" style="width: 100% !important; border: none !important; overflow: hidden !important; height: 9999px !important;" horizontalscrolling="no" verticalscrolling="no"></iframe></div>
+      <script type="text/javascript">
+          var disqus_shortname = 'codingrobin';
+
+          (function() {
+              var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+              dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+              (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+          })();
+      </script>
+      <noscript>Please enable JavaScript to view the &lt;a href="http://disqus.com/?ref_noscript"&gt;comments powered by Disqus.&lt;/a&gt;</noscript>
+      
+    </section>
+  
+</section>
+
+<div class="section-blue">
+  <section class="about-content">
+    <img src="./Coding Robin_files/headline-aboutus.png" alt="I love building web applications!">
+    <article class="full">
+      <p>I am a flexible software developer. I work closely with my
+      clients to help them realize their ideas &amp; projects, from
+      beginning to end, using a wide range of technologies.</p>
+    </article>
+  </section>
+  <section class="profile">
+    <div id="robin" class="item">
+      <div class="item-top">
+        <img src="./Coding Robin_files/rmehner-avatar.png" class="avatar" alt="Robin Mehner">
+          <div class="profile-buttons">
+            <a href="http://www.github.com/rmehner" class="github">
+              <img src="./Coding Robin_files/github_button.png" alt="View Robin Mehner&#39;s Github Profile" title="Robin Mehner">
+            </a>
+            <a href="http://www.twitter.com/rmehner" class="twitter">
+              <img src="./Coding Robin_files/twitter_button.png" alt="Follow rmehner">
+            </a>
+          </div>
+      </div>
+      <div class="item-bottom">
+        <p>
+          Robin Mehner has over a decade of experience building &amp; shipping software,
+          using Ruby, JavaScript, Node.js, SQL &amp; NoSQL databases, PHP, Go and many more
+          technologies. He also loves to organize community events.
+        </p>
+      </div>
+    </div>
+  </section>
+  <div class="hire">
+    <a class="button" href="mailto:robin@coding-robin.de" title="Write me an email – I love to hear form you!">hire me</a>
+  </div>
+</div>
+
+
+<div class="section-blue no-wave">
+  <section class="projects">
+    <img src="./Coding Robin_files/headline-projects.png" alt="This is what we do for fun!">
+    <article class="project-links">
+      <ul class="contentlist">
+        <li>
+          <h3><a href="https://github.com/rmehner/spotify-remote">spotify-remote</a></h3>
+          <p>Control Spotify with your web browser</p>
+        </li>
+        <li>
+          <h3><a href="https://github.com/mrnugget/watchgopher">watchgopher</a></h3>
+          <p>Watch directories and react on changes</p>
+        </li>
+        <li>
+          <h3><a href="http://berlinjs.org/">Berlin.JS</a></h3>
+          <p>The Berlin JavaScript usergroup.</p>
+        </li>
+        <li>
+          <h3><a href="http://rejectjs.org/">Reject.JS</a></h3>
+          <p>A JavaScript community conference – <a href="http://jsconf.eu/">JSConf.eu's</a> little companion</p>
+        </li>
+        <li>
+          <h3><a href="http://nodecopter.com/">NodeCopter</a></h3>
+          <p>Program flying robots with JavaScript</p>
+        </li>
+        <li>
+          <h3><a href="http://summerofdrones.com/">Summer of Drones</a></h3>
+          <p>Flying robots – all summer long!</p>
+        </li>
+        <li>
+          <h3><a href="http://www.bephpug.de/">BEPHPUG</a></h3>
+          <p>Berlin's PHP usergroup</p>
+        </li>
+        <li>
+          <h3><a href="http://up.front.ug/">up.front</a></h3>
+          <p>A monthly meetup for webdesigners &amp; frontend developers in Berlin.</p>
+        </li>
+      </ul>
+    </article>
+  </section>
+</div>
+
+
+
+      </div>
+
+      <footer class="section-white">
+        <div class="credits">
+        © 2013 Coding Robin — Designed by <a href="http://iamkida.com/">Katharina Buca</a> — <a href="http://coding-robin.de/impressum.html">Impressum</a>
+      </div>
+      </footer>
+
+
+    </div>
+
+    <script type="text/javascript">
+      var disqus_shortname = 'codingrobin';
+
+      var _gaq = _gaq || [];
+      _gaq.push(['_setAccount', 'UA-34753383-1']);
+      _gaq.push(['_trackPageview']);
+
+      (function() {
+        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+
+        var dqs_s = document.createElement('script'); dqs_s.async = true;
+        dqs_s.type = 'text/javascript';
+        dqs_s.src = 'http://' + disqus_shortname + '.disqus.com/count.js';
+        (document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(dqs_s);
+      })();
+    </script>
+  
+
+</body></html>

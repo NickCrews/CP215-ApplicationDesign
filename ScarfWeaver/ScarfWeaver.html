@@ -1,0 +1,70 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html><head><title>Python: module ScarfWeaver</title>
+<meta charset="utf-8">
+</head><body bgcolor="#f0f0f8">
+
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="heading">
+<tr bgcolor="#7799ee">
+<td valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial">&nbsp;<br><big><big><strong>ScarfWeaver</strong></big></big> (version 1.0)</font></td
+><td align=right valign=bottom
+><font color="#ffffff" face="helvetica, arial"><a href=".">index</a><br><a href="file:/Users/nicholascrews/CLASSES/CP215/Assignments/ScarfWeaver/ScarfWeaver.py">/Users/nicholascrews/CLASSES/CP215/Assignments/ScarfWeaver/ScarfWeaver.py</a></font></td></tr></table>
+    <p><tt>ScarfWeaver.py<br>
+Emulates&nbsp;a&nbsp;loom,&nbsp;with&nbsp;warp&nbsp;and&nbsp;weft&nbsp;threads.&nbsp;Given&nbsp;a&nbsp;pattern&nbsp;of&nbsp;warp&nbsp;threads,&nbsp;draw&nbsp;an&nbsp;image&nbsp;based&nbsp;on&nbsp;the&nbsp;pattern.&nbsp;<br>
+This&nbsp;uses&nbsp;elementary&nbsp;cellular&nbsp;automata&nbsp;to&nbsp;generate&nbsp;each&nbsp;row&nbsp;pattern.&nbsp;I&nbsp;used&nbsp;the&nbsp;model&nbsp;at&nbsp;<a href="http://mathworld.wolfram.com/ElementaryCellularAutomaton.html">http://mathworld.wolfram.com/ElementaryCellularAutomaton.html</a>.<br>
+&nbsp;<br>
+Nick&nbsp;Crews<br>
+Feb&nbsp;16,&nbsp;2016</tt></p>
+<p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#aa55cc">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Modules</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#aa55cc"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="PIL.Image.html">PIL.Image</a><br>
+</td><td width="25%" valign=top><a href="PIL.ImageDraw.html">PIL.ImageDraw</a><br>
+</td><td width="25%" valign=top><a href="random.html">random</a><br>
+</td><td width="25%" valign=top></td></tr></table></td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#eeaa77">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Functions</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#eeaa77"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl><dt><a name="-drawRow"><strong>drawRow</strong></a>(image, y, pattern)</dt><dd><tt>Draw&nbsp;the&nbsp;pattern&nbsp;at&nbsp;row&nbsp;y&nbsp;to&nbsp;the&nbsp;image</tt></dd></dl>
+ <dl><dt><a name="-drawThread"><strong>drawThread</strong></a>(image, x, y, color)</dt><dd><tt>Draw&nbsp;the&nbsp;block&nbsp;at&nbsp;(x,y)&nbsp;in&nbsp;our&nbsp;image&nbsp;to&nbsp;be&nbsp;color</tt></dd></dl>
+ <dl><dt><a name="-generateRule"><strong>generateRule</strong></a>(number)</dt><dd><tt>Given&nbsp;a&nbsp;rule&nbsp;number&nbsp;(0,255)&nbsp;for&nbsp;an&nbsp;elementary&nbsp;cellular&nbsp;automata,&nbsp;generate&nbsp;the&nbsp;8&nbsp;bit&nbsp;rule&nbsp;list</tt></dd></dl>
+ <dl><dt><a name="-main"><strong>main</strong></a>()</dt><dd><tt>Initialize&nbsp;our&nbsp;rule&nbsp;and&nbsp;seed&nbsp;row,&nbsp;then&nbsp;step&nbsp;through&nbsp;generations,&nbsp;drawing&nbsp;in&nbsp;our&nbsp;image&nbsp;as&nbsp;we&nbsp;go</tt></dd></dl>
+ <dl><dt><a name="-nextRow"><strong>nextRow</strong></a>(row, rule)</dt><dd><tt>Uses&nbsp;rule&nbsp;to&nbsp;compute&nbsp;the&nbsp;next&nbsp;generation&nbsp;(row)&nbsp;for&nbsp;elementary&nbsp;cellular&nbsp;automata.&nbsp;<br>
+row&nbsp;is&nbsp;a&nbsp;list&nbsp;of&nbsp;bitss&nbsp;of&nbsp;at&nbsp;least&nbsp;length&nbsp;2.&nbsp;<br>
+rule&nbsp;is&nbsp;a&nbsp;list&nbsp;of&nbsp;8&nbsp;bits&nbsp;which&nbsp;encodes&nbsp;the&nbsp;rule&nbsp;number.&nbsp;<br>
+For&nbsp;boundary&nbsp;conditions,&nbsp;I&nbsp;assumed&nbsp;everything&nbsp;past&nbsp;the&nbsp;edge&nbsp;was&nbsp;0.</tt></dd></dl>
+ <dl><dt><a name="-randomSeed"><strong>randomSeed</strong></a>()</dt><dd><tt>Generate&nbsp;a&nbsp;random&nbsp;but&nbsp;symmetric&nbsp;seed&nbsp;row</tt></dd></dl>
+ <dl><dt><a name="-standardSeed"><strong>standardSeed</strong></a>()</dt><dd><tt>Generate&nbsp;the&nbsp;standard&nbsp;seed&nbsp;row,&nbsp;with&nbsp;all&nbsp;0s&nbsp;except&nbsp;for&nbsp;a&nbsp;1&nbsp;in&nbsp;the&nbsp;center</tt></dd></dl>
+</td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#55aa55">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Data</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#55aa55"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><strong>HEIGHT</strong> = 300<br>
+<strong>OUTPUT_PATH</strong> = 'scarf.png'<br>
+<strong>RANDOM_SEED</strong> = False<br>
+<strong>RULE_NUMBER</strong> = 218<br>
+<strong>THREAD_SIZE</strong> = 8<br>
+<strong>WARP</strong> = (255, 0, 0)<br>
+<strong>WEFT</strong> = (55, 55, 55)<br>
+<strong>WIDTH</strong> = 201<br>
+<strong>__author__</strong> = 'Nick Crews'<br>
+<strong>__version__</strong> = 1.0</td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#7799ee">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Author</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#7799ee"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%">Nick&nbsp;Crews</td></tr></table>
+</body></html>
